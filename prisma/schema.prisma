@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       String   @default("cliente")
+  createdAt DateTime @default(now())
+
+  ventas    Venta[]
+  recetas   Receta[]
+}
+
+model Medicamento {
+  id              Int      @id @default(autoincrement())
+  nombre          String
+  principioActivo String
+  concentracion   String
+  forma           String
+  marca           String
+  requiereReceta  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  lotes Lote[]
+}
+
+model Lote {
+  id               Int      @id @default(autoincrement())
+  numeroLote       String
+  fechaVencimiento DateTime
+  stock            Int
+
+  medicamentoId Int
+  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
+
+  detallesVenta DetalleVenta[]
+}
+
+model Venta {
+  id        Int      @id @default(autoincrement())
+  total     Float
+  estado    String   @default("pendiente")
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+
+  detalles DetalleVenta[]
+}
+
+model DetalleVenta {
+  id              Int   @id @default(autoincrement())
+  cantidad        Int
+  precioUnitario  Float
+
+  ventaId Int
+  venta   Venta @relation(fields: [ventaId], references: [id])
+
+  loteId Int
+  lote   Lote @relation(fields: [loteId], references: [id])
+}
+
+model Receta {
+  id        Int      @id @default(autoincrement())
+  archivo   String
+  validada  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  usuarioId Int
+  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+}

@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  /* 🎨 Base médica limpia */
+  --background: #f8fafc; /* gris muy suave tipo hospital */
+  --foreground: #0f172a; /* azul oscuro clínico */
+
+  /* 💊 colores de acento (salud) */
+  --primary: #2563eb; /* azul médico confiable */
+  --secondary: #10b981; /* verde salud */
+  --warning: #f59e0b;
+  --danger: #ef4444;
+
+  /* 🧊 UI */
+  --card: #ffffff;
+  --border: #e2e8f0;
+  --muted: #64748b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* 🌙 Dark mode clínico (tipo sistema hospitalario) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0b1220; /* azul oscuro médico */
+    --foreground: #e5e7eb;
+
+    --card: #111827;
+    --border: #1f2937;
+    --muted: #94a3b8;
+
+    --primary: #3b82f6;
+    --secondary: #22c55e;
+  }
+}
+
+/* 🧠 Base del sistema */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 📦 Contenedores tipo hospital UI */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+/* 🔘 botones consistentes */
+button {
+  transition: all 0.2s ease;
+}
+
+/* 📊 scrollbar limpio */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
