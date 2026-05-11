@@ -7,133 +7,133 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//
-// =====================
-// 👤 USUARIOS
-// =====================
-//
-model Usuario {
+// Usuarios y roles
+enum Role {
+  ADMIN
+  INSTITUTION
+  PATIENT
+  EXECUTIVE
+  OPERATOR
+  ANALYST
+}
+
+model User {
   id        Int      @id @default(autoincrement())
-  nombre    String
   email     String   @unique
   password  String
-  rol       String   @default("cliente") // cliente | admin | vendedor
+  name      String?
+  role      Role     @default(PATIENT)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
-  ventas  Venta[]
-  recetas Receta[]
+  institution Institution?
+  orders      Order[]
 }
 
-//
-// =====================
-// 💊 MEDICAMENTOS
-// =====================
-//
-model Medicamento {
-  id              Int     @id @default(autoincrement())
-  nombre          String
-  principioActivo String
-  concentracion   String
-  forma           String
-  marca           String
-  laboratorio     String?
-  codigoInterno   String? @unique
-  requiereReceta  Boolean @default(false)
+// Instituciones (clínicas)
+model Institution {
+  id   Int    @id @default(autoincrement())
+  name String
+  rut  String @unique
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  lotes Lote[]
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
 }
 
-//
-// =====================
-// 📦 LOTES (INVENTARIO)
-// =====================
-//
-model Lote {
-  id               Int      @id @default(autoincrement())
-  numeroLote       String
-  fechaVencimiento DateTime
-  stock            Int
-  stockMinimo      Int      @default(0)
-  precioCompra     Float?
-  precioVenta      Float?
+// Productos
+model Product {
+  id          Int     @id @default(autoincrement())
+  name        String
+  description String?
+  category String
+  code        String  @unique
+
+  originalPrice   Float
+  offerPercentage Float @default(0)
+
+  rating      Float @default(0)
+  ratingCount Int   @default(0)
+
+  stocks Int @default(0)
+
+  images ProductImage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  medicamentoId Int
-  medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
-
-  detallesVenta DetalleVenta[]
-  movimientos   MovimientoStock[]
+  orderItems OrderItem[]
 }
 
-//
-// =====================
-// 💰 VENTAS
-// =====================
-//
-model Venta {
-  id         Int      @id @default(autoincrement())
-  total      Float
-  estado     String   @default("pendiente") // pendiente | pagada | cancelada
-  metodoPago String?
-  createdAt  DateTime @default(now())
+model ProductImage {
+  id  Int    @id @default(autoincrement())
+  url String
 
-  usuarioId Int
-  usuario   Usuario @relation(fields: [usuarioId], references: [id])
-
-  detalles DetalleVenta[]
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-//
-// =====================
-// 🧾 DETALLE DE VENTA
-// =====================
-//
-model DetalleVenta {
-  id             Int   @id @default(autoincrement())
-  cantidad       Int
-  precioUnitario Float
-
-  ventaId Int
-  venta   Venta @relation(fields: [ventaId], references: [id])
-
-  loteId Int
-  lote   Lote @relation(fields: [loteId], references: [id])
+// Órdenes / ventas
+enum OrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  IN_PREPARATION
+  SHIPPED
+  DELIVERED
 }
 
-//
-// =====================
-// 📉 MOVIMIENTOS DE STOCK (AUDITORÍA)
-// =====================
-//
-model MovimientoStock {
-  id        Int      @id @default(autoincrement())
-  tipo      String // entrada | salida | ajuste
-  cantidad  Int
-  motivo    String?
+model Order {
+  id     Int         @id @default(autoincrement())
+  total  Float
+  status OrderStatus @default(PENDING)
+
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+
+  items OrderItem[]
+
+  payment  Payment?
+  tracking Tracking?
+
   createdAt DateTime @default(now())
-
-  loteId Int
-  lote   Lote @relation(fields: [loteId], references: [id])
 }
 
-//
-// =====================
-// 📄 RECETAS
-// =====================
-//
-model Receta {
-  id        Int      @id @default(autoincrement())
-  archivo   String
-  validada  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model OrderItem {
+  id Int @id @default(autoincrement())
 
-  usuarioId Int
-  usuario   Usuario @relation(fields: [usuarioId], references: [id])
+  quantity Int
+  price    Float
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id])
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+// Pagos
+enum PaymentStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  status        PaymentStatus @default(PENDING)
+  method        String?
+  transactionId String?
+
+  orderId Int   @unique
+  order   Order @relation(fields: [orderId], references: [id])
+}
+
+// Logística / tracking
+model Tracking {
+  id      Int     @id @default(autoincrement())
+  code    String  @unique
+  carrier String?
+  status  String?
+
+  orderId Int   @unique
+  order   Order @relation(fields: [orderId], references: [id])
 }
