@@ -13,7 +13,7 @@ const menuItems = [
   { name: 'Inicio', href: ROUTE.HOME },
   { name: 'Medicamentos', href: ROUTE.ALL_PRODUCTS },
   { name: 'Categorías', href: ROUTE.CATEGORIES },
-  { name: 'Inventario', href: ROUTE.CART },
+  { name: 'Carrito', href: ROUTE.CART },
 ]
 
 export const Navbar = () => {
