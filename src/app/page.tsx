@@ -13,7 +13,7 @@ export default function Home() {
           <Link href="/login">
             <Button variant="outline">Login</Button>
           </Link>
-
+admin123
           <Link href="/register">
             <Button>Registrarse</Button>
           </Link>

@@ -18,22 +18,44 @@ const menuItems = [
 
 export const Navbar = () => {
   const [menuState, setMenuState] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
+  const [user, setUser] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  // 🔐 traer usuario
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
-    }
+    fetch('/api/auth/me')
+      .then(res => res.json())
+      .then(data => setUser(data.user))
+      .finally(() => setLoading(false))
+  }, [])
+
+  // scroll effect
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    setUser(null)
+    setDropdownOpen(false)
+  }
+
+  if (loading) {
+    return (
+      <header className="h-16 border-b flex items-center px-4">
+        <div className="animate-pulse">Loading...</div>
+      </header>
+    )
+  }
+
   return (
     <header className="relative">
-      <nav
-        data-state={menuState && 'active'}
-        className="fixed top-0 left-0 right-0 z-50 px-4"
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 px-4">
         <div
           className={cn(
             'mx-auto max-w-7xl flex items-center justify-between py-3 transition-all duration-300',
@@ -50,7 +72,7 @@ export const Navbar = () => {
             </h3>
           </Link>
 
-          {/* BOTÓN MOBILE */}
+          {/* MOBILE BUTTON */}
           <button
             onClick={() => setMenuState(!menuState)}
             className="lg:hidden p-2"
@@ -58,7 +80,7 @@ export const Navbar = () => {
             {menuState ? <X size={22} /> : <Equal size={22} />}
           </button>
 
-          {/* MENU DESKTOP */}
+          {/* DESKTOP MENU */}
           <ul className="hidden lg:flex gap-8 text-sm">
             {menuItems.map((item, index) => (
               <li key={index}>
@@ -72,22 +94,63 @@ export const Navbar = () => {
             ))}
           </ul>
 
-          {/* ACCIONES */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  Login
-                </Button>
-              </DialogTrigger>
-              <LoginDialogContent />
-            </Dialog>
+          {/* AUTH SECTION */}
+          <div className="hidden lg:flex items-center gap-3 relative">
+
+            {user ? (
+              <>
+                {/* AVATAR */}
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center"
+                >
+                  {user.email?.charAt(0).toUpperCase()}
+                </button>
+
+                {/* DROPDOWN */}
+                {dropdownOpen && (
+                  <div className="absolute right-0 top-12 w-52 bg-white border rounded-xl shadow-lg z-50">
+
+                    <div className="p-3 border-b">
+                      <p className="text-sm font-medium">{user.email}</p>
+                      <p className="text-xs text-gray-500">{user.rol}</p>
+                    </div>
+
+                    {user.rol === 'admin' && (
+                      <Link
+                        href={ROUTE.DASHBOARD}
+                        className="block px-4 py-2 hover:bg-gray-100"
+                        onClick={() => setDropdownOpen(false)}
+                      >
+                        Dashboard
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={logout}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm">Login</Button>
+                </DialogTrigger>
+                <LoginDialogContent />
+              </Dialog>
+            )}
+
           </div>
         </div>
 
-        {/* MENU MOBILE */}
+        {/* MOBILE MENU */}
         {menuState && (
           <div className="lg:hidden mt-2 mx-4 rounded-2xl border bg-background shadow-lg p-4 space-y-4">
+
             {menuItems.map((item, index) => (
               <Link
                 key={index}
@@ -99,14 +162,42 @@ export const Navbar = () => {
               </Link>
             ))}
 
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button className="w-full">
-                  Login
-                </Button>
-              </DialogTrigger>
-              <LoginDialogContent />
-            </Dialog>
+            {/* AUTH MOBILE */}
+            {user ? (
+              <>
+                <div className="text-sm border-t pt-3">
+                  <p>{user.email}</p>
+                  <p className="text-xs text-gray-500">{user.rol}</p>
+                </div>
+
+                {user.rol === 'admin' && (
+                  <Link
+                    href={ROUTE.DASHBOARD}
+                    className="block py-2 hover:text-primary"
+                    onClick={() => setMenuState(false)}
+                  >
+                    Dashboard
+                  </Link>
+                )}
+
+                <button
+                  onClick={logout}
+                  className="w-full text-left py-2 text-red-500"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="w-full">
+                    Login
+                  </Button>
+                </DialogTrigger>
+                <LoginDialogContent />
+              </Dialog>
+            )}
+
           </div>
         )}
       </nav>

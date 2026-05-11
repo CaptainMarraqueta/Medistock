@@ -1,5 +1,5 @@
 import { IOrder } from "@/src/types/general";
-import { mockProducts } from "./mockProducts";
+import { mockProducts } from "./mockProducts.js";
 
 const mockOrders: IOrder[] = [
   {

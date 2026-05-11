@@ -7,48 +7,81 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//
+// =====================
+// 👤 USUARIOS
+// =====================
+//
 model Usuario {
   id        Int      @id @default(autoincrement())
   nombre    String
   email     String   @unique
   password  String
-  rol       String   @default("cliente")
+  rol       String   @default("cliente") // cliente | admin | vendedor
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  ventas    Venta[]
-  recetas   Receta[]
+  ventas  Venta[]
+  recetas Receta[]
 }
 
+//
+// =====================
+// 💊 MEDICAMENTOS
+// =====================
+//
 model Medicamento {
-  id              Int      @id @default(autoincrement())
+  id              Int     @id @default(autoincrement())
   nombre          String
   principioActivo String
   concentracion   String
   forma           String
   marca           String
-  requiereReceta  Boolean  @default(false)
-  createdAt       DateTime @default(now())
+  laboratorio     String?
+  codigoInterno   String? @unique
+  requiereReceta  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   lotes Lote[]
 }
 
+//
+// =====================
+// 📦 LOTES (INVENTARIO)
+// =====================
+//
 model Lote {
   id               Int      @id @default(autoincrement())
   numeroLote       String
   fechaVencimiento DateTime
   stock            Int
+  stockMinimo      Int      @default(0)
+  precioCompra     Float?
+  precioVenta      Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   medicamentoId Int
   medicamento   Medicamento @relation(fields: [medicamentoId], references: [id])
 
   detallesVenta DetalleVenta[]
+  movimientos   MovimientoStock[]
 }
 
+//
+// =====================
+// 💰 VENTAS
+// =====================
+//
 model Venta {
-  id        Int      @id @default(autoincrement())
-  total     Float
-  estado    String   @default("pendiente")
-  createdAt DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  total      Float
+  estado     String   @default("pendiente") // pendiente | pagada | cancelada
+  metodoPago String?
+  createdAt  DateTime @default(now())
 
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
@@ -56,10 +89,15 @@ model Venta {
   detalles DetalleVenta[]
 }
 
+//
+// =====================
+// 🧾 DETALLE DE VENTA
+// =====================
+//
 model DetalleVenta {
-  id              Int   @id @default(autoincrement())
-  cantidad        Int
-  precioUnitario  Float
+  id             Int   @id @default(autoincrement())
+  cantidad       Int
+  precioUnitario Float
 
   ventaId Int
   venta   Venta @relation(fields: [ventaId], references: [id])
@@ -68,11 +106,33 @@ model DetalleVenta {
   lote   Lote @relation(fields: [loteId], references: [id])
 }
 
+//
+// =====================
+// 📉 MOVIMIENTOS DE STOCK (AUDITORÍA)
+// =====================
+//
+model MovimientoStock {
+  id        Int      @id @default(autoincrement())
+  tipo      String // entrada | salida | ajuste
+  cantidad  Int
+  motivo    String?
+  createdAt DateTime @default(now())
+
+  loteId Int
+  lote   Lote @relation(fields: [loteId], references: [id])
+}
+
+//
+// =====================
+// 📄 RECETAS
+// =====================
+//
 model Receta {
   id        Int      @id @default(autoincrement())
   archivo   String
   validada  Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   usuarioId Int
   usuario   Usuario @relation(fields: [usuarioId], references: [id])
