@@ -8,29 +8,18 @@ const config: Config = {
     "^@/(.*)$": "<rootDir>/$1",
   },
 
-  // Cobertura
-  collectCoverage: true,
-  coverageDirectory: "coverage",
-
-  coverageReporters: [
-    "text",
-    "html",
-    "lcov",
-  ],
-
-  collectCoverageFrom: [
-    "src/**/*.{ts,tsx}",
-    "!src/**/*.test.ts",
-    "!src/**/*.spec.ts",
-    "!src/**/*.d.ts",
-  ],
-
-  // Reportes
   reporters: [
     "default",
+    [
+      "jest-html-reporters",
+      {
+        publicPath: "./html-report",
+        filename: "report.html",
+        expand: true,
+      },
+    ],
   ],
 
-  // Más detalle en consola
   verbose: true,
 };
 
