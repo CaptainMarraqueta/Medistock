@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const { email, password } = await req.json();
 
-    const user = await prisma.usuario.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -18,7 +18,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const validPassword = await bcrypt.compare(password, user.password);
+    const validPassword = await bcrypt.compare(
+      password,
+      user.password
+    );
 
     if (!validPassword) {
       return NextResponse.json(
@@ -29,17 +32,16 @@ export async function POST(req: Request) {
 
     const token = signToken({
       id: user.id,
-      rol: user.rol,
+      role: user.role,
       email: user.email,
     });
 
-    // ✅ FORMA CORRECTA Y ESTABLE
     const response = NextResponse.json({
       message: "Login correcto",
       user: {
         id: user.id,
-        nombre: user.nombre,
-        rol: user.rol,
+        name: user.name,
+        role: user.role,
       },
     });
 
