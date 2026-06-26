@@ -1,6 +1,4 @@
-// app/api/auth/login/route.test.ts
-
-import { POST } from "../src/app/api/auth/login/route"
+import { POST } from "../src/app/api/auth/login/route";
 import { prisma } from "@/src/lib/prisma";
 import bcrypt from "bcrypt";
 import { signToken } from "@/src/lib/auth";
@@ -21,7 +19,7 @@ jest.mock("@/src/lib/auth", () => ({
   signToken: jest.fn(),
 }));
 
-describe("POST /api/auth/login", () => {
+describe("CP-01 - Login", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -52,8 +50,8 @@ describe("POST /api/auth/login", () => {
       id: 1,
       email: "test@test.com",
       password: "hash",
-      rol: "ADMIN",
-      nombre: "Juan",
+      role: "ADMIN",
+      name: "Juan",
     });
 
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
@@ -79,10 +77,10 @@ describe("POST /api/auth/login", () => {
   it("debe realizar login correctamente", async () => {
     const user = {
       id: 1,
-      nombre: "Juan",
+      name: "Juan",
       email: "test@test.com",
       password: "hash",
-      rol: "ADMIN",
+      role: "ADMIN",
     };
 
     (prisma.user.findUnique as jest.Mock).mockResolvedValue(user);
@@ -108,14 +106,14 @@ describe("POST /api/auth/login", () => {
       message: "Login correcto",
       user: {
         id: 1,
-        nombre: "Juan",
-        rol: "ADMIN",
+        name: "Juan",
+        role: "ADMIN",
       },
     });
 
     expect(signToken).toHaveBeenCalledWith({
       id: 1,
-      rol: "ADMIN",
+      role: "ADMIN",
       email: "test@test.com",
     });
 

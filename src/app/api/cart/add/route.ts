@@ -5,15 +5,26 @@ export async function POST(req: Request) {
   try {
     const { userId, productId, quantity } = await req.json();
 
-    // 🧠 VALIDACIÓN BÁSICA
-    if (!userId || !productId || !quantity) {
+    // Validaciones
+    if (
+      userId == null ||
+      productId == null ||
+      quantity == null
+    ) {
       return NextResponse.json(
         { error: "Datos incompletos" },
         { status: 400 }
       );
     }
 
-    // 1. Buscar order activa
+    if (quantity <= 0) {
+      return NextResponse.json(
+        { error: "La cantidad debe ser mayor a 0" },
+        { status: 400 }
+      );
+    }
+
+    // Buscar carrito pendiente
     let cart = await prisma.order.findFirst({
       where: {
         userId,
@@ -21,7 +32,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 2. Crear order si no existe
+    // Crear carrito si no existe
     if (!cart) {
       cart = await prisma.order.create({
         data: {
@@ -32,30 +43,21 @@ export async function POST(req: Request) {
       });
     }
 
-    // 3. Obtener producto
+    // Obtener producto
     const product = await prisma.product.findUnique({
-      where: { id: productId },
+      where: {
+        id: productId,
+      },
     });
 
     if (!product) {
       return NextResponse.json(
-        { error: "Producto no existe" },
+        { error: "Producto no encontrado" },
         { status: 404 }
       );
     }
 
-    if (product.stocks < quantity) {
-      return NextResponse.json(
-        { error: "Sin stock" },
-        { status: 400 }
-      );
-    }
-
-    const price =
-      product.originalPrice *
-      (1 - product.offerPercentage / 100);
-
-    // 4. Ver si ya existe item en carrito
+    // Buscar si el producto ya existe en el carrito
     const existingItem = await prisma.orderItem.findFirst({
       where: {
         orderId: cart.id,
@@ -63,11 +65,33 @@ export async function POST(req: Request) {
       },
     });
 
+    const newQuantity = existingItem
+      ? existingItem.quantity + quantity
+      : quantity;
+
+    // Validar stock total
+    if (newQuantity > product.stocks) {
+      return NextResponse.json(
+        {
+          error: `Solo quedan ${product.stocks} unidades disponibles.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Precio con descuento
+    const price =
+      product.originalPrice *
+      (1 - product.offerPercentage / 100);
+
+    // Actualizar o crear item
     if (existingItem) {
       await prisma.orderItem.update({
-        where: { id: existingItem.id },
+        where: {
+          id: existingItem.id,
+        },
         data: {
-          quantity: existingItem.quantity + quantity,
+          quantity: newQuantity,
         },
       });
     } else {
@@ -81,9 +105,15 @@ export async function POST(req: Request) {
       });
     }
 
-    // 5. recalcular total
+    // Recalcular total
     const items = await prisma.orderItem.findMany({
-      where: { orderId: cart.id },
+      where: {
+        orderId: cart.id,
+      },
+      select: {
+        quantity: true,
+        price: true,
+      },
     });
 
     const total = items.reduce(
@@ -91,18 +121,32 @@ export async function POST(req: Request) {
       0
     );
 
+    // Actualizar total de la orden
     await prisma.order.update({
-      where: { id: cart.id },
-      data: { total },
+      where: {
+        id: cart.id,
+      },
+      data: {
+        total,
+      },
     });
 
-    return NextResponse.json({ ok: true, total });
+    return NextResponse.json({
+      ok: true,
+      message: "Producto agregado al carrito.",
+      cartId: cart.id,
+      total,
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Cart Error:", error);
 
     return NextResponse.json(
-      { error: "Error en carrito" },
-      { status: 500 }
+      {
+        error: "Error interno del servidor.",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

@@ -2,6 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/src/components/ui/button";
+import { Input } from '../ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog";
 import { ChevronRight } from 'lucide-react';
 import { FaCartPlus, FaBagShopping } from "react-icons/fa6";
 import { cn } from "@/src/lib/utils";
@@ -16,15 +23,21 @@ export default function ProductOverview() {
   const params = useParams();
   const router = useRouter();
 
-  const productId = typeof params?.id === "string"
-    ? params.id
-    : Array.isArray(params?.id)
-      ? params.id[0]
-      : null;
+  const productId =
+    typeof params?.id === "string"
+      ? params.id
+      : Array.isArray(params?.id)
+        ? params.id[0]
+        : null;
 
   const [productData, setProductData] = useState<IProduct | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // NUEVOS ESTADOS
+  const [quantity, setQuantity] = useState(1);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [buyNow, setBuyNow] = useState(false);
 
   useEffect(() => {
     if (!productId) return;
@@ -53,8 +66,11 @@ export default function ProductOverview() {
     fetchProduct();
   }, [productId]);
 
-  // 🛒 ADD TO CART
-  const handleAddToCart = async () => {
+  // AGREGAR AL CARRITO
+  const handleAddToCart = async (
+    quantity: number,
+    redirectToCart = false
+  ) => {
     try {
       const res = await fetch("/api/cart/add", {
         method: "POST",
@@ -62,18 +78,25 @@ export default function ProductOverview() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: 1, // ⚠️ luego lo reemplazas por auth real
+          userId: 1, // luego reemplazar por usuario autenticado
           productId: productData?.id,
-          quantity: 1,
+          quantity,
         }),
       });
 
+      const data = await res.json();
+
       if (!res.ok) {
-        console.error("Error al agregar al carrito");
+        alert(data.error || "Error al agregar al carrito");
         return;
       }
 
-      console.log("Producto agregado al carrito");
+      setOpenDialog(false);
+
+      if (redirectToCart) {
+        router.push(ROUTE.CART);
+      }
+
     } catch (error) {
       console.error("Cart error:", error);
     }
@@ -89,10 +112,10 @@ export default function ProductOverview() {
 
   if (!productData) {
     return (
-      <div className='min-h-[90dvh] flex justify-center items-center'>
+      <div className="min-h-[90dvh] flex justify-center items-center">
         <NoProducts
           showButton
-          title='Producto no encontrado'
+          title="Producto no encontrado"
           message="El producto no existe o fue eliminado."
           buttonLabel="Volver"
           redirectTo={ROUTE.ALL_PRODUCTS}
@@ -101,7 +124,7 @@ export default function ProductOverview() {
     );
   }
 
-  // 🧠 limpiar imágenes
+  // Limpiar imágenes
   const images =
     productData.images
       ?.map(img => typeof img === "string" ? img : img.url)
@@ -114,10 +137,12 @@ export default function ProductOverview() {
     safeImages[selectedImage] ?? safeImages[0];
 
   const price = Math.round(
-    productData.originalPrice * (1 - productData.offerPercentage / 100)
+    productData.originalPrice *
+      (1 - productData.offerPercentage / 100)
   );
 
-  return (
+return (
+  <>
     <div className="min-h-[100dvh]">
       <div className="container mx-auto p-4 md:p-8">
 
@@ -135,13 +160,13 @@ export default function ProductOverview() {
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
 
-          {/* IMAGES */}
+          {/* IMÁGENES */}
           <div className="space-y-4 col-span-1 lg:col-span-2">
 
             <div className="overflow-hidden rounded-xl border">
               <div className="relative aspect-square bg-background">
 
-                {currentImage && currentImage.trim() !== "" && (
+                {currentImage && (
                   <Image
                     src={currentImage}
                     alt={productData.name}
@@ -165,22 +190,20 @@ export default function ProductOverview() {
                       : "border-border"
                   )}
                 >
-                  {image && (
-                    <Image
-                      src={image}
-                      alt={`${productData.name} ${index}`}
-                      width={80}
-                      height={80}
-                      className="object-contain"
-                    />
-                  )}
+                  <Image
+                    src={image}
+                    alt={`${productData.name}-${index}`}
+                    width={80}
+                    height={80}
+                    className="object-contain"
+                  />
                 </button>
               ))}
             </div>
 
           </div>
 
-          {/* INFO */}
+          {/* INFORMACIÓN */}
           <div className="space-y-4 col-span-1 lg:col-span-3">
 
             <h1 className="text-3xl font-bold">
@@ -197,6 +220,7 @@ export default function ProductOverview() {
                   <div className="text-sm line-through text-muted-foreground">
                     ${productData.originalPrice.toLocaleString("es-CL")}
                   </div>
+
                   <div className="text-sm text-destructive">
                     -{productData.offerPercentage}%
                   </div>
@@ -206,6 +230,7 @@ export default function ProductOverview() {
 
             <div className="flex items-center gap-2">
               <RatingStars rating={productData.rating} />
+
               <span className="text-sm text-muted-foreground">
                 ({productData.ratingCount})
               </span>
@@ -215,41 +240,176 @@ export default function ProductOverview() {
               {productData.description}
             </p>
 
-            {/* BUTTONS DESKTOP */}
+            {/* BOTONES DESKTOP */}
             <div className="space-y-2 pt-4 hidden md:block">
+
               <Button
                 variant="outline"
                 size="lg"
                 className="w-full"
-                onClick={handleAddToCart}
+                onClick={() => {
+                  setQuantity(1);
+                  setBuyNow(false);
+                  setOpenDialog(true);
+                }}
               >
-                <FaCartPlus /> Agregar al carrito
+                <FaCartPlus className="mr-2" />
+                Agregar al carrito
               </Button>
 
-              <Button size="lg" className="w-full">
-                <FaBagShopping /> Comprar ahora
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={() => {
+                  setQuantity(1);
+                  setBuyNow(true);
+                  setOpenDialog(true);
+                }}
+              >
+                <FaBagShopping className="mr-2" />
+                Comprar ahora
               </Button>
+
             </div>
 
           </div>
+
         </div>
+
       </div>
 
-      {/* MOBILE */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 border-t p-3 flex gap-2 bg-background">
+      {/* BOTONES MOBILE */}
+
+      <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background p-3 flex gap-2">
+
         <Button
           variant="outline"
           className="flex-1"
-          onClick={handleAddToCart}
+          onClick={() => {
+            setQuantity(1);
+            setBuyNow(false);
+            setOpenDialog(true);
+          }}
         >
-          <FaCartPlus /> Agregar
+          <FaCartPlus className="mr-2" />
+          Agregar
         </Button>
 
-        <Button className="flex-1">
-          <FaBagShopping /> Comprar
+        <Button
+          className="flex-1"
+          onClick={() => {
+            setQuantity(1);
+            setBuyNow(true);
+            setOpenDialog(true);
+          }}
+        >
+          <FaBagShopping className="mr-2" />
+          Comprar
         </Button>
+
       </div>
 
     </div>
-  );
+
+    {/* DIALOG */}
+
+    <Dialog
+  open={openDialog}
+  onOpenChange={setOpenDialog}
+>
+  <DialogContent className="sm:max-w-sm">
+    <DialogHeader>
+      <DialogTitle>Selecciona la cantidad</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-4 py-2">
+
+      <p className="text-center text-sm text-muted-foreground">
+        Stock disponible:{" "}
+        <span className="font-semibold">
+          {productData.stocks}
+        </span>
+      </p>
+
+      <div className="flex items-center justify-center gap-3">
+
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={quantity <= 1}
+          onClick={() =>
+            setQuantity((q) => Math.max(1, q - 1))
+          }
+        >
+          -
+        </Button>
+
+        <Input
+          type="number"
+          min={1}
+          max={productData.stocks}
+          value={quantity}
+          onChange={(e) => {
+            const value = e.target.value;
+
+            // Permite borrar temporalmente el input
+            if (value === "") {
+              setQuantity(1);
+              return;
+            }
+
+            let number = parseInt(value);
+
+            if (isNaN(number)) return;
+
+            number = Math.max(1, number);
+            number = Math.min(productData.stocks, number);
+
+            setQuantity(number);
+          }}
+          className="w-24 text-center"
+        />
+
+        <Button
+          variant="outline"
+          size="icon"
+          disabled={quantity >= productData.stocks}
+          onClick={() =>
+            setQuantity((q) =>
+              Math.min(productData.stocks, q + 1)
+            )
+          }
+        >
+          +
+        </Button>
+
+      </div>
+
+      <Button
+        className="w-full"
+        onClick={() =>
+          handleAddToCart(quantity, buyNow)
+        }
+      >
+        {buyNow ? (
+          <>
+            <FaBagShopping className="mr-2" />
+            Comprar ahora
+          </>
+        ) : (
+          <>
+            <FaCartPlus className="mr-2" />
+            Agregar al carrito
+          </>
+        )}
+      </Button>
+
+    </div>
+  </DialogContent>
+</Dialog>
+
+
+
+  </>
+);
 }

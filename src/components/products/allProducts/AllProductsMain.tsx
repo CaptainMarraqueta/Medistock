@@ -6,8 +6,58 @@ import { prisma } from "@/src/lib/prisma";
 import { mapProduct } from "@/src/lib/mappers/product.mapper";
 import { IProduct } from "@/src/types/general";
 
-async function getProducts(): Promise<IProduct[]> {
+interface Props {
+  searchParams?: {
+    search?: string;
+    sort?: string;
+    category?: string;
+  };
+}
+
+async function getProducts(
+  search: string,
+  sort: string,
+  categories: string[]
+): Promise<IProduct[]> {
   const products = await prisma.product.findMany({
+    where: {
+      ...(search && {
+        name: {
+          contains: search,
+          mode: "insensitive",
+        },
+      }),
+
+      ...(categories.length > 0 && !categories.includes("all")
+        ? {
+            category: {
+              in: categories,
+            },
+          }
+        : {}),
+    },
+
+    orderBy:
+      sort === "oldest"
+        ? {
+            createdAt: "asc",
+          }
+        : sort === "name"
+        ? {
+            name: "asc",
+          }
+        : sort === "price"
+        ? {
+            originalPrice: "asc",
+          }
+        : sort === "rating"
+        ? {
+            rating: "desc",
+          }
+        : {
+            createdAt: "desc",
+          },
+
     include: {
       images: true,
     },
@@ -16,18 +66,24 @@ async function getProducts(): Promise<IProduct[]> {
   return products.map(mapProduct);
 }
 
-export default async function AllProductsMain() {
-  const products = await getProducts();
+export default async function AllProductsMain({
+  searchParams,
+}: Props) {
+  const search = searchParams?.search ?? "";
+  const sort = searchParams?.sort ?? "newest";
+
+  const categories =
+    searchParams?.category?.split(",").filter(Boolean) ?? [];
+
+  const products = await getProducts(search, sort, categories);
 
   return (
     <div className="min-h-screen">
       <div className="container mx-auto">
         <div className="flex">
-
           <DesktopFilterSection />
 
           <div className="flex-1 p-4 md:p-8 mt-15 lg:mt-10">
-
             <AllProductHeader />
 
             {!products.length ? (
@@ -45,7 +101,6 @@ export default async function AllProductsMain() {
                 ))}
               </div>
             )}
-
           </div>
         </div>
       </div>
